@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="theme-color" content="#09090b" />
+    <title>1RM</title>
+    <style>
+      * { box-sizing: border-box; margin: 0; -webkit-tap-highlight-color: transparent; }
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+        background: #09090b; color: #f4f4f5;
+        min-height: 100vh; padding: env(safe-area-inset-top) 16px calc(24px + env(safe-area-inset-bottom));
+        max-width: 480px; margin: 0 auto;
+      }
+      h1 { font-size: 22px; font-weight: 700; padding: 16px 0 4px; }
+      .sub { color: #a1a1aa; font-size: 13px; margin-bottom: 16px; }
+      .card { background: #18181b; border: 1px solid #27272a; border-radius: 16px; padding: 16px; margin-bottom: 12px; }
+      label { display: block; font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: #a1a1aa; margin-bottom: 6px; }
+      select, input[type=number] {
+        width: 100%; padding: 12px; font-size: 17px; border-radius: 12px;
+        background: #27272a; border: 1px solid #3f3f46; color: #f4f4f5; appearance: none; -webkit-appearance: none;
+      }
+      .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+      .field { margin-bottom: 10px; }
+      .result { text-align: center; padding: 24px 16px; }
+      .result .label { font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: #a1a1aa; }
+      .result .value { font-size: 56px; font-weight: 800; color: #34d399; margin: 8px 0; font-variant-numeric: tabular-nums; }
+      .result .unit { font-size: 20px; font-weight: 600; }
+      .fiab { font-size: 12px; }
+      .ok { color: #34d399; } .warn { color: #fbbf24; }
+      .formules div { display: flex; justify-content: space-between; font-size: 14px; padding: 7px 0; border-bottom: 1px solid #27272a; }
+      .formules div:last-child { border-bottom: none; }
+      .formules span:first-child { color: #a1a1aa; }
+      table { width: 100%; border-collapse: collapse; font-size: 15px; font-variant-numeric: tabular-nums; }
+      th { text-align: left; font-size: 11px; text-transform: uppercase; color: #a1a1aa; padding: 4px 0 10px; font-weight: 600; }
+      td { padding: 9px 0; border-top: 1px solid #27272a; }
+      td:last-child, th:last-child { text-align: right; }
+      td.kg { font-weight: 700; }
+      .note { color: #71717a; font-size: 11px; line-height: 1.5; margin-top: 8px; }
+      input[type=range] { width: 100%; accent-color: #34d399; height: 40px; background: transparent; }
+    </style>
+  </head>
+  <body>
+    <h1>Calculateur 1RM</h1>
+    <p class="sub">Estime ton max à partir d'un set près de l'échec.</p>
+
+    <div class="card">
+      <div class="field">
+        <label for="exo">Exercice</label>
+        <select id="exo"></select>
+      </div>
+      <div class="row">
+        <div class="field">
+          <label for="charge">Charge (kg)</label>
+          <input type="number" id="charge" inputmode="decimal" step="0.5" min="0" value="110" />
+        </div>
+        <div class="field">
+          <label for="reps">Répétitions</label>
+          <input type="number" id="reps" inputmode="numeric" step="1" min="1" max="15" value="5" />
+        </div>
+      </div>
+      <label for="rpe">RPE <span id="rpeLabel" style="text-transform:none"></span></label>
+      <input type="range" id="rpe" min="6" max="10" step="1" value="10" />
+    </div>
+
+    <div class="card result">
+      <div class="label">1RM estimé</div>
+      <div class="value"><span id="rm">0</span><span class="unit"> kg</span></div>
+      <div class="fiab" id="fiab"></div>
+    </div>
+
+    <div class="card formules">
+      <div><span>Epley</span><span id="epley"></span></div>
+      <div><span>Brzycki</span><span id="brzycki"></span></div>
+      <div><span>Lander</span><span id="lander"></span></div>
+    </div>
+
+    <div class="card">
+      <table>
+        <thead><tr><th>% du 1RM</th><th>Reps</th><th>Charge</th></tr></thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+
+    <p class="note">Moyenne des formules Epley, Brzycki et Lander. Un 1RM estimé sert à programmer, pas à valider un record.</p>
+
+    <script>
+      var EXOS = [
+        ["Squat", 110], ["Soulevé de terre", 175], ["Développé couché", 92.5],
+        ["Squat avant", 80], ["Développé militaire", 40],
+        ["Tractions lestées", 8], ["Dips lestés", 12], ["Autre", 60]
+      ];
+      var RPE_FATIGUE = { 10: 0, 9: 1, 8: 2, 7: 3, 6: 4 };
+      var RPE_TXT = { 10: "10 (échec)", 9: "9", 8: "8", 7: "7", 6: "6" };
+      var PCT = [[95, 2], [90, 4], [85, 6], [80, 8], [75, 10], [70, 12], [65, 15], [60, 18]];
+
+      var sel = document.getElementById("exo");
+      EXOS.forEach(function (e, i) {
+        var o = document.createElement("option");
+        o.value = i; o.textContent = e[0];
+        sel.appendChild(o);
+      });
+
+      function fmt(v) { return (Math.round(v * 2) / 2).toLocaleString("fr-FR"); }
+
+      function calc() {
+        var charge = parseFloat(document.getElementById("charge").value) || 0;
+        var reps = Math.min(15, Math.max(1, parseInt(document.getElementById("reps").value) || 1));
+        var rpe = parseInt(document.getElementById("rpe").value);
+        var r = Math.min(15, reps + RPE_FATIGUE[rpe]);
+        document.getElementById("rpeLabel").textContent = " : " + RPE_TXT[rpe];
+
+        var ep = charge * (1 + r / 30);
+        var br = r >= 37 ? charge * 36 : (charge * 36) / (37 - r);
+        var la = charge / (1.013 - 0.0267123 * r);
+        var moy = (ep + br + la) / 3;
+
+        document.getElementById("rm").textContent = fmt(moy);
+        document.getElementById("epley").textContent = fmt(ep) + " kg";
+        document.getElementById("brzycki").textContent = fmt(br) + " kg";
+        document.getElementById("lander").textContent = fmt(la) + " kg";
+
+        var f = document.getElementById("fiab");
+        if (r <= 6) { f.textContent = "Fiabilité : bonne"; f.className = "fiab ok"; }
+        else { f.textContent = "Fiabilité : limitée au-delà de 6 reps"; f.className = "fiab warn"; }
+
+        var tb = document.getElementById("tbody");
+        tb.innerHTML = "";
+        PCT.forEach(function (p) {
+          var tr = document.createElement("tr");
+          tr.innerHTML = "<td>" + p[0] + " %</td><td>" + p[1] + "</td><td class='kg'>" + fmt(moy * p[0] / 100) + " kg</td>";
+          tb.appendChild(tr);
+        });
+      }
+
+      sel.addEventListener("change", function () {
+        document.getElementById("charge").value = EXOS[sel.value][1];
+        calc();
+      });
+      ["charge", "reps", "rpe"].forEach(function (id) {
+        document.getElementById(id).addEventListener("input", calc);
+      });
+      calc();
+    </script>
+  </body>
+</html>
