@@ -41,6 +41,11 @@
       td.kg { font-weight: 700; }
       .note { color: #71717a; font-size: 11px; line-height: 1.5; margin-top: 8px; }
       input[type=range] { width: 100%; accent-color: #34d399; height: 40px; background: transparent; }
+      details summary { list-style: none; }
+      details summary::-webkit-details-marker { display: none; }
+      details[open] summary { margin-bottom: 4px; }
+      .rpe-table td { border-top: none; padding: 3px 0; font-size: 12px; color: #d4d4d8; }
+      .rpe-table td:first-child { color: #a1a1aa; white-space: nowrap; padding-right: 12px; }
     </style>
   </head>
   <body>
@@ -64,6 +69,24 @@
       </div>
       <label for="rpe">RPE <span id="rpeLabel" style="text-transform:none"></span></label>
       <input type="range" id="rpe" min="6" max="10" step="1" value="10" />
+      <details style="margin-top:8px">
+        <summary style="font-size:12px;color:#a1a1aa;cursor:pointer">C'est quoi le RPE ?</summary>
+        <p style="font-size:12px;color:#a1a1aa;line-height:1.6;margin-top:8px">
+          RPE = Rate of Perceived Exertion, l'effort perçu du set, de 1 à 10.
+          Concrètement, il correspond au nombre de reps qu'il te restait dans le réservoir :
+        </p>
+        <table class="rpe-table">
+          <tr><td>RPE 10</td><td>Échec : impossible d'ajouter une rep.</td></tr>
+          <tr><td>RPE 9</td><td>1 rep en réserve.</td></tr>
+          <tr><td>RPE 8</td><td>2 reps en réserve.</td></tr>
+          <tr><td>RPE 7</td><td>3 reps en réserve.</td></tr>
+          <tr><td>RPE 6</td><td>4 reps en réserve.</td></tr>
+        </table>
+        <p style="font-size:12px;color:#a1a1aa;line-height:1.6;margin-top:8px">
+          Plus ton set est loin de l'échec, plus le calcul corrige tes reps vers le haut :
+          5 reps à RPE 8 sont comptées comme 7 reps à cette charge.
+        </p>
+      </details>
     </div>
 
     <div class="card result">
